@@ -1,18 +1,18 @@
-// ai-content-detector/services/geminiService.ts
+// services/geminiService.ts
 
-import { GoogleGenerAI, GenerateContentResponse } from "@google/genai";
+import { GoogleGenerativeAI, GenerateContentResponse } from "@google/generative-ai";
 import { AnalysisResult } from '../types';
 
-// 1. Get the key using import.meta.env and the VITE_ prefix
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
-// 2. Update the check
 if (!apiKey) {
     throw new Error("VITE_GEMINI_API_KEY environment variable not set");
 }
 
-// 3. Use the new apiKey variable to initialize the client
-const ai = new GoogleGenerAI({ apiKey });
+// Use the correct class name here
+const ai = new GoogleGenerativeAI(apiKey); 
+
+// ... rest of your file
 const textModel = 'gemini-2.5-flash-preview-04-17';
 const visionModel = 'gemini-2.5-flash-preview-04-17';
 
