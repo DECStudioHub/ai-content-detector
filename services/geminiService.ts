@@ -1,11 +1,18 @@
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
+// ai-content-detector/services/geminiService.ts
+
+import { GoogleGenerAI, GenerateContentResponse } from "@google/genai";
 import { AnalysisResult } from '../types';
 
-if (!process.env.API_KEY) {
-    throw new Error("API_KEY environment variable not set");
+// 1. Get the key using import.meta.env and the VITE_ prefix
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+
+// 2. Update the check
+if (!apiKey) {
+    throw new Error("VITE_GEMINI_API_KEY environment variable not set");
 }
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// 3. Use the new apiKey variable to initialize the client
+const ai = new GoogleGenerAI({ apiKey });
 const textModel = 'gemini-2.5-flash-preview-04-17';
 const visionModel = 'gemini-2.5-flash-preview-04-17';
 
