@@ -1,6 +1,6 @@
 // services/geminiService.ts
 
-import { GoogleGenerativeAI, GenerateContentResponse } from "@google/generative-ai";
+import { GoogleGenerativeAI, GenerateContentResult, Part } from "@google/generative-ai"; // FIXED: Imported missing types
 import { AnalysisResult } from '../types';
 
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
@@ -9,15 +9,17 @@ if (!apiKey) {
     throw new Error("VITE_GEMINI_API_KEY environment variable not set");
 }
 
-// Use the correct class name here
-const ai = new GoogleGenerativeAI(apiKey); 
+// This is correct, no changes needed
+const ai = new GoogleGenerativeAI({ apiKey: apiKey });
 
-// ... rest of your file
-const textModel = 'gemini-2.5-flash-preview-04-17';
-const visionModel = 'gemini-2.5-flash-preview-04-17';
+// REMOVED: Deleted the old string variables. We will create model objects inside the functions.
+// const textModel = '...';
+// const visionModel = '...';
 
+// This function is correct, no changes needed
 const parseJsonResponse = (rawText: string): AnalysisResult | null => {
     let jsonStr = rawText.trim();
+    // This regex is good for cleaning up markdown code fences
     const fenceRegex = /^```(\w*)?\s*\n?(.*?)\n?\s*```$/s;
     const match = jsonStr.match(fenceRegex);
     if (match && match[2]) {
@@ -26,7 +28,6 @@ const parseJsonResponse = (rawText: string): AnalysisResult | null => {
 
     try {
         const parsed = JSON.parse(jsonStr);
-        // Basic validation
         if (parsed.determination && typeof parsed.confidence === 'number' && parsed.rationale) {
             return parsed as AnalysisResult;
         }
@@ -38,6 +39,7 @@ const parseJsonResponse = (rawText: string): AnalysisResult | null => {
     }
 };
 
+// All prompts are correct, no changes needed
 const textAnalysisPrompt = `
 You are an expert in distinguishing between human-written and AI-generated text. Analyze the following text and determine if it was likely written by an AI.
 Consider factors like perplexity, burstiness, complexity, and common AI writing patterns.
@@ -83,18 +85,24 @@ Provide your response in a valid JSON object with the following structure:
 
 export const analyzeText = async (text: string): Promise<AnalysisResult> => {
     try {
-        const response: GenerateContentResponse = await ai.models.generateContent({
-            model: textModel,
-            contents: `${textAnalysisPrompt}\n${text}`,
-            config: {
+        // ADDED: Create the model object right before you use it.
+        const model = ai.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+
+        // FIXED: Call generateContent on the 'model' object, not 'ai.models'.
+        // The response handling is also updated to the correct SDK pattern.
+        const result: GenerateContentResult = await model.generateContent({
+            contents: [{ role: "user", parts: [{ text: `${textAnalysisPrompt}\n${text}` }] }],
+            generationConfig: { // FIXED: 'config' should be 'generationConfig'
                 responseMimeType: "application/json",
                 temperature: 0.2,
             },
         });
-
-        const result = parseJsonResponse(response.text);
-        if (result) {
-            return result;
+        
+        const response = result.response;
+        const parsedResult = parseJsonResponse(response.text()); // FIXED: use response.text() function
+        
+        if (parsedResult) {
+            return parsedResult;
         } else {
             throw new Error("Failed to parse the analysis result from the API.");
         }
@@ -106,29 +114,34 @@ export const analyzeText = async (text: string): Promise<AnalysisResult> => {
 
 export const analyzeImage = async (imageBase64: string, mimeType: string): Promise<AnalysisResult> => {
     try {
-        const imagePart = {
+        // ADDED: Create the model object right before you use it.
+        const model = ai.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+
+        const imagePart: Part = { // ADDED: type for clarity
             inlineData: {
                 data: imageBase64,
                 mimeType,
             },
         };
 
-        const textPart = {
+        const textPart: Part = { // ADDED: type for clarity
             text: imageAnalysisPrompt,
         };
-
-        const response: GenerateContentResponse = await ai.models.generateContent({
-            model: visionModel,
-            contents: { parts: [textPart, imagePart] },
-            config: {
+        
+        // FIXED: The structure of calling generateContent and handling the response.
+        const result: GenerateContentResult = await model.generateContent({
+            contents: [{ role: "user", parts: [textPart, imagePart] }],
+            generationConfig: {
                 responseMimeType: "application/json",
                 temperature: 0.2,
             },
         });
         
-        const result = parseJsonResponse(response.text);
-        if (result) {
-            return result;
+        const response = result.response;
+        const parsedResult = parseJsonResponse(response.text());
+        
+        if (parsedResult) {
+            return parsedResult;
         } else {
             throw new Error("Failed to parse the analysis result from the API.");
         }
@@ -141,29 +154,34 @@ export const analyzeImage = async (imageBase64: string, mimeType: string): Promi
 
 export const analyzeVideo = async (frames: { imageBase64: string; mimeType: string }[]): Promise<AnalysisResult> => {
     try {
-        const textPart = {
+        // ADDED: Create the model object right before you use it.
+        const model = ai.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+
+        const textPart: Part = {
             text: videoAnalysisPrompt,
         };
 
-        const imageParts = frames.map(frame => ({
+        const imageParts: Part[] = frames.map(frame => ({
             inlineData: {
                 data: frame.imageBase64,
                 mimeType: frame.mimeType,
             },
         }));
-
-        const response: GenerateContentResponse = await ai.models.generateContent({
-            model: visionModel,
-            contents: { parts: [textPart, ...imageParts] },
-            config: {
+        
+        // FIXED: The structure of calling generateContent and handling the response.
+        const result: GenerateContentResult = await model.generateContent({
+            contents: [{ role: "user", parts: [textPart, ...imageParts] }],
+            generationConfig: {
                 responseMimeType: "application/json",
                 temperature: 0.2,
             },
         });
         
-        const result = parseJsonResponse(response.text);
-        if (result) {
-            return result;
+        const response = result.response;
+        const parsedResult = parseJsonResponse(response.text());
+        
+        if (parsedResult) {
+            return parsedResult;
         } else {
             throw new Error("Failed to parse the analysis result from the API.");
         }
