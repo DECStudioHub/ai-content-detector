@@ -1,22 +1,14 @@
-import path from 'path';
-import { defineConfig, loadEnv } from 'vite';
+// vite.config.ts
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import path from 'path'
 
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, '.', '');
-
-  return {
-    // This is placed correctly!
-    base: "/ai-content-detector/",
-
-    define: {
-      // Using just one key for clarity
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+export default defineConfig({
+  plugins: [react()],
+  base: '/ai-content-detector/',
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, '.'),
     },
-
-    resolve: {
-      alias: {
-        '@': path.resolve(__dirname, '.'),
-      },
-    },
-  };
-});
+  },
+})
